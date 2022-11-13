@@ -55,7 +55,7 @@ def transmit(msg, client_socket):
     client_socket.sendall(msg.encode('utf-8'))
     response = client_socket.recv(1024).decode()
     print("Request Response from the Server: ")
-    print(response.split(' '))
+    print(response)
 
 
 def sync_rfc(client_socket):

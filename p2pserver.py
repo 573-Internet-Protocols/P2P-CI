@@ -23,11 +23,11 @@ class RFCIndex:
         self.peer_name = peer_name
 
 
-def threaded(c):
+def threaded(client_socket):
     while True:
 
         # data received from client
-        data = c.recv(4096)
+        data = client_socket.recv(4096)
         data = data.decode('utf-8')
         if not data:
             print('Bye')
@@ -36,21 +36,33 @@ def threaded(c):
             print_lock.release()
             break
 
+        p2p_version = get_version(data)
+        if (p2p_version != 'P2P-CI/1.0'):
+            client_socket.send("505 P2P-CI Version Not Supported".encode())
+            print_lock.release()
+            break
+
         method = get_method(data)
         if (method == "ADD"):
-            add_rfc(data)
+            add_rfc(data, client_socket)
 
-        c.sendall(data.encode('utf-8'))
+        if (method == "LOOKUP"):
+            print("To-do")
+            # c.sendall(data.encode('utf-8'))
 
-    # connection closed
-    c.close()
+            # connection closed
+    client_socket.close()
 
 
 def get_method(data):
     return data.split(' ')[0]
 
 
-def add_rfc(data):
+def get_version(data):
+    return data.split(' ')[3].rstrip('\r\nHost:')
+
+
+def add_rfc(data, client_socket):
     fields = data.split(' ')
     peer_name = fields[4].rstrip('\r\nPort:')
     print(peer_name)
@@ -70,9 +82,16 @@ def add_rfc(data):
     new_rfc = RFCIndex(rfc_number, rfc_title, peer_name)
     if new_rfc not in rfc_index:
         rfc_index.insert(0, new_rfc)
+        response = format_add_response(new_peer, new_rfc)
+        client_socket.send(response.encode('utf-8'))
 
 
-# create server socket object
+def format_add_response(new_peer, new_rfc):
+    response = "P2P-CI/1.0 200 OK\r\n" + "RFC " + new_rfc.rfc_number + " " + \
+        new_rfc.rfc_titile + " " + new_rfc.peer_name + " " + new_peer.upload_port
+    return response
+
+    # create server socket object
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print("Socket successfully created")
 port = 7734
@@ -85,11 +104,11 @@ print("socket is listening")
 while True:
 
     # Establish connection with client.
-    c, addr = s.accept()
+    client_socket, addr = s.accept()
 
     print_lock.acquire()
     print('Got connection from', addr)
-    start_new_thread(threaded, (c,))
+    start_new_thread(threaded, (client_socket,))
 
     # Close the connection with the client
     # c.close()
