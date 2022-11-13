@@ -52,15 +52,16 @@ def format_msg_p2s(method, title, rfc_number, host_name, upload_port):
 
 
 def transmit(msg, client_socket):
-    client_socket.send(msg.encode)
+    client_socket.sendall(msg.encode('utf-8'))
     response = client_socket.recv(1024).decode()
     print("Request Response from the Server: ")
-    print(response)
+    print(response.split(' '))
 
 
 def sync_rfc(client_socket):
     title, rfc_number = get_local_rfc()
     for (t, n) in zip(title, rfc_number):
+        print(t)
         msg = format_msg_p2s("ADD", t, n, "Zijun", "123")
         transmit(msg, client_socket)
 
@@ -91,5 +92,7 @@ def main():
 # # receive data from the server
 # print(s.recv(1024).decode())
 
+
 # # close the connection
 # s.close()
+main()
